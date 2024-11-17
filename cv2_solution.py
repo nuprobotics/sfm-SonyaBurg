@@ -70,13 +70,9 @@ def resection(
         points_3d
 ):
     pass
-    # YOUR CODE HERE
-
-
+# Task 5
 def convert_to_world_frame(translation_vector, rotation_matrix):
-    pass
-    # YOUR CODE HERE
-
+    return -rotation_matrix.T @ translation_vector, rotation_matrix.transpose()
 
 def visualisation(
         camera_position1: np.ndarray,
