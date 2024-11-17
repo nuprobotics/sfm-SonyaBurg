@@ -16,10 +16,19 @@ def get_matches(image1, image2) -> typing.Tuple[
     kp2, descriptors2 = sift.detectAndCompute(img2_gray, None)
 
     bf = cv2.BFMatcher()
-    matches_1_to_2: typing.Sequence[typing.Sequence[cv2.DMatch]] = bf.knnMatch(descriptors1, descriptors2, k=2)
+    matches_1_to_2 = bf.knnMatch(descriptors1, descriptors2, k=2)
+    matches_2_to_1 = bf.knnMatch(descriptors2, descriptors1, k=2)
+    good_12 = [x for x, y in matches_1_to_2 if x.distance < 0.75 * y.distance]
+    good_21 = [x for x, y in matches_2_to_1 if x.distance < 0.75 * y.distance]
 
-    # YOUR CODE HERE
+    result = []
+    for match1 in good_12:
+        for match2 in good_21:
+            if match1.queryIdx == match2.trainIdx and match1.trainIdx == match2.queryIdx:
+                result.append(match1)
+                break
 
+    return kp1, kp2, result
 
 def get_second_camera_position(kp1, kp2, matches, camera_matrix):
     coordinates1 = np.array([kp1[match.queryIdx].pt for match in matches])
@@ -40,8 +49,16 @@ def triangulation(
         kp2: typing.Sequence[cv2.KeyPoint],
         matches: typing.Sequence[cv2.DMatch]
 ):
-    pass
-    # YOUR CODE HERE
+    proj_matrix1 = camera_matrix @ np.hstack((camera1_rotation_matrix, camera1_translation_vector.reshape(-1, 1)))
+    proj_matrix2 = camera_matrix @ np.hstack((camera2_rotation_matrix, camera2_translation_vector.reshape(-1, 1)))
+
+    matched_points1 = np.array([kp1[m.queryIdx].pt for m in matches], dtype=np.float32).T
+    matched_points2 = np.array([kp2[m.trainIdx].pt for m in matches], dtype=np.float32).T
+
+    points_4d_homogeneous = cv2.triangulatePoints(proj_matrix1, proj_matrix2, matched_points1, matched_points2)
+
+    points_3d = cv2.convertPointsFromHomogeneous(points_4d_homogeneous.T).reshape(-1, 3)
+    return points_3d
 
 
 # Task 4
@@ -53,13 +70,9 @@ def resection(
         points_3d
 ):
     pass
-    # YOUR CODE HERE
-
-
+# Task 5
 def convert_to_world_frame(translation_vector, rotation_matrix):
-    pass
-    # YOUR CODE HERE
-
+    return -rotation_matrix.T @ translation_vector, rotation_matrix.transpose()
 
 def visualisation(
         camera_position1: np.ndarray,
